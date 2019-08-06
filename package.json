@@ -1,0 +1,29 @@
+{
+  "name": "download-jianshu-images",
+  "version": "1.0.0",
+  "description": "Node + typescript 实现下载简书文章中所有的图片链接",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "build:prod": "node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxcz213/download-jianshu-images.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mxcz213/download-jianshu-images/issues"
+  },
+  "homepage": "https://github.com/mxcz213/download-jianshu-images#readme",
+  "devDependencies": {
+    "@types/node": "^12.6.9",
+    "download": "^7.1.0",
+    "runscript": "^1.4.0",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.5.3"
+  }
+}
