@@ -25,5 +25,8 @@
     "runscript": "^1.4.0",
     "ts-node": "^8.3.0",
     "typescript": "^3.5.3"
+  },
+  "bin": {
+    "jianshu": "bin/jianshu"
   }
 }
