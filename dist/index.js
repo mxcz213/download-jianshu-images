@@ -40,78 +40,90 @@ var path = require('path');
 var runScript = require('runscript');
 var download = require('download');
 //windows中用户复制的目录
-var originDir = 'D:\\jianshu_article\\user-5541401-1565071963\\';
+var sourceDir = 'D:\\jianshu_article\\user-5541401-1565071963\\';
 var targetDir = 'E:\\workCode\\download-jianshu-images\\jianshu_article\\';
-var readmeUrlReg = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
-var imageUrlReg = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
-//用户通过命令行工具输入命令比如：node dist/index.js 简书解压目录 目标存储图片目录
-process.argv.forEach(function (val, index) {
-    console.log(index + ": " + val);
-});
 try {
-    originDir = process.argv[2] ? process.argv[2] : originDir;
+    sourceDir = process.argv[2] ? process.argv[2] : sourceDir;
     targetDir = process.argv[3] ? process.argv[3] : targetDir;
 }
 catch (e) {
     console.log('获取命令参数错误', e);
 }
-var downloadImages = function (imgurl, path) {
-    var newUrlArr = [];
-    imgurl.forEach(function (item) {
-        if (item.match(imageUrlReg)) {
-            newUrlArr.push(item.match(imageUrlReg)[0]);
-        }
-    });
-    console.log(newUrlArr);
-    Promise.all(newUrlArr.map(function (url) {
-        download(url, path);
-    })).then(function () {
-        console.log('all files downloaded');
-    });
-};
-var runFunction = function () { return __awaiter(_this, void 0, void 0, function () {
-    var stdout, files, num;
+//获取所有markdown文件
+var getAllMarkdownFiles = function (sourceDir) { return __awaiter(_this, void 0, void 0, function () {
+    var stdout, files;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, runScript('ls **/*.md', {
-                    cwd: originDir,
+                    cwd: sourceDir,
                     stdio: 'pipe'
                 })];
             case 1:
                 stdout = (_a.sent()).stdout;
                 files = stdout.toString().split('\n');
-                num = 0;
+                //去掉ls命令产生的尾部空行
+                files.pop();
+                return [2 /*return*/, files];
+        }
+    });
+}); };
+//处理目录为合法的windows目录
+var handleDir = function (fileitem) {
+    var filepath = fileitem.split('.md')[0].split('/').join('\\');
+    var dirStr = targetDir + "\\" + filepath;
+    return dirStr;
+};
+//获取markdown文件内容
+var getArticleContent = function (fileitem) {
+    var fileContent = fs.readFileSync(path.join(sourceDir, fileitem.split('/').join('\\')), { encoding: 'utf8' });
+    return fileContent;
+};
+//获取图片url的markdown写法![](https://....)
+var getMarkdownImageUrls = function (fileContent) {
+    var readmeUrlReg = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
+    return fileContent.match(readmeUrlReg);
+};
+//获取真实的url格式：http://...
+var getRealImageUrl = function (markdownUrls) {
+    var imageUrlReg = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
+    var imageUrls = [];
+    markdownUrls.forEach(function (item) {
+        if (item.match(imageUrlReg)) {
+            imageUrls.push(item.match(imageUrlReg)[0]);
+        }
+    });
+    return imageUrls;
+};
+//下载图片
+var downloadImages = function (imgurl, path) {
+    var newUrlArr = getRealImageUrl(imgurl);
+    newUrlArr.map(function (url) {
+        download(url, path);
+    });
+    console.log('all image downloaded');
+};
+//入口函数
+var runDownLoader = function () { return __awaiter(_this, void 0, void 0, function () {
+    var files;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, getAllMarkdownFiles(sourceDir)];
+            case 1:
+                files = _a.sent();
                 try {
                     files.forEach(function (fileitem, index) {
                         if (fileitem) {
-                            var filepath = fileitem.split('.md')[0].split('/').join('\\');
-                            var dirStr_1 = targetDir + "\\" + filepath;
+                            var dirStr_1 = handleDir(fileitem);
                             runScript("mkdir " + dirStr_1, { stdio: 'pipe' })
-                                .then(function (stdio) {
-                                var fileContent = fs.readFileSync(path.join(originDir, fileitem.split('/').join('\\')), { encoding: 'utf8' });
-                                var urlList = fileContent.match(readmeUrlReg);
+                                .then(function () {
+                                var fileContent = getArticleContent(fileitem);
+                                var urlList = getMarkdownImageUrls(fileContent);
                                 if (urlList && urlList.length > 0) {
                                     downloadImages(urlList, dirStr_1);
                                 }
                             });
                         }
                     });
-                    //就不全部下载了，图片太多
-                    // for(let i = 0; i < 4; i++){
-                    //     let fileitem: string = files[i]
-                    //      if(fileitem){
-                    //         let filepath: string = fileitem.split('.md')[0].split('/').join('\\')
-                    //         let dirStr: string = `${targetDir}\\${filepath}`                
-                    //         runScript(`mkdir ${dirStr}`, { stdio: 'pipe' })
-                    //         .then((stdio: any) => {
-                    //             let fileContent = fs.readFileSync(path.join(originDir, fileitem.split('/').join('\\')), { encoding: 'utf8'})
-                    //             let urlList: any = fileContent.match(readmeUrlReg)
-                    //             if(urlList && urlList.length > 0){
-                    //                 downloadImages(urlList, dirStr)
-                    //             }
-                    //         })
-                    //     }
-                    // }
                 }
                 catch (e) {
                     console.log(e);
@@ -120,4 +132,4 @@ var runFunction = function () { return __awaiter(_this, void 0, void 0, function
         }
     });
 }); };
-runFunction();
+runDownLoader();
