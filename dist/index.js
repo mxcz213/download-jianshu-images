@@ -39,17 +39,8 @@ var fs = require('fs');
 var path = require('path');
 var runScript = require('runscript');
 var download = require('download');
-//windows中用户复制的目录
-var sourceDir = 'D:\\jianshu_article\\user-5541401-1565071963\\';
-var targetDir = 'E:\\workCode\\download-jianshu-images\\jianshu_article\\';
-try {
-    sourceDir = process.argv[2] ? process.argv[2] : sourceDir;
-    targetDir = process.argv[3] ? process.argv[3] : targetDir;
-}
-catch (e) {
-    console.log('获取命令参数错误', e);
-}
-//获取所有markdown文件
+var _a = process.argv, sourceDir = _a[2], targetDir = _a[3];
+//sourceDir：简书文章目录
 var getAllMarkdownFiles = function (sourceDir) { return __awaiter(_this, void 0, void 0, function () {
     var stdout, files;
     return __generator(this, function (_a) {
@@ -68,68 +59,93 @@ var getAllMarkdownFiles = function (sourceDir) { return __awaiter(_this, void 0,
     });
 }); };
 //处理目录为合法的windows目录
-var handleDir = function (fileitem) {
-    var filepath = fileitem.split('.md')[0].split('/').join('\\');
+var handleDir = function (fileItem) {
+    var filepath = fileItem.split('.md')[0].split('/').join('\\'); //不能只处理windows系统的命令
     var dirStr = targetDir + "\\" + filepath;
     return dirStr;
 };
 //获取markdown文件内容
 var getArticleContent = function (fileitem) {
-    var fileContent = fs.readFileSync(path.join(sourceDir, fileitem.split('/').join('\\')), { encoding: 'utf8' });
+    var wholePath = path.join(sourceDir, fileitem.split('/').join('\\')); //不要进行平台特殊处理
+    var fileContent = fs.readFileSync(wholePath, { encoding: 'utf8' });
     return fileContent;
 };
 //获取图片url的markdown写法![](https://....)
 var getMarkdownImageUrls = function (fileContent) {
-    // const readmeUrlReg: RegExp = /!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)/g;
-    var readmeUrlReg = /!\[\]\([\s\S]+\)/g;
-    return fileContent.match(readmeUrlReg);
+    var markdownUrlReg = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
+    var markdownUrl = fileContent.match(markdownUrlReg);
+    return markdownUrl;
 };
 //获取真实的url格式：http://...
 var getRealImageUrl = function (markdownUrls) {
-    // const imageUrlReg: RegExp = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
-    var imageUrlReg = /https:[a-zA-Z0-9-_?%./]+/g;
+    var imageUrlReg = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
     var imageUrls = [];
     markdownUrls.forEach(function (item) {
-        if (item.match(imageUrlReg)) {
+        if (item.match(imageUrlReg).length > 0) {
             imageUrls.push(item.match(imageUrlReg)[0]);
+        }
+        else {
+            return [];
         }
     });
     return imageUrls;
 };
 //下载图片
-var downloadImages = function (imgurl, path) {
-    var newUrlArr = getRealImageUrl(imgurl);
-    newUrlArr.map(function (url) {
-        download(url, path);
+var downloadImages = function (imgurl, path) { return __awaiter(_this, void 0, void 0, function () {
+    var newUrlArr;
+    return __generator(this, function (_a) {
+        newUrlArr = getRealImageUrl(imgurl);
+        newUrlArr.map(function (url) {
+            if (!url)
+                return;
+            download(url, path);
+        });
+        return [2 /*return*/];
     });
-    console.log('all image downloaded');
-};
+}); };
 //入口函数
 var runDownLoader = function () { return __awaiter(_this, void 0, void 0, function () {
     var files;
+    var _this = this;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, getAllMarkdownFiles(sourceDir)];
             case 1:
                 files = _a.sent();
-                try {
-                    files.forEach(function (fileitem, index) {
-                        if (fileitem) {
-                            var dirStr_1 = handleDir(fileitem);
-                            runScript("mkdir " + dirStr_1, { stdio: 'pipe' })
-                                .then(function () {
-                                var fileContent = getArticleContent(fileitem);
-                                var urlList = getMarkdownImageUrls(fileContent);
-                                if (urlList && urlList.length > 0) {
-                                    downloadImages(urlList, dirStr_1);
+                files.forEach(function (fileItem) { return __awaiter(_this, void 0, void 0, function () {
+                    var fileContent, urlList, dirStr;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                if (fileItem === null) {
+                                    return [2 /*return*/];
                                 }
-                            });
+                                fileContent = getArticleContent(fileItem);
+                                urlList = getMarkdownImageUrls(fileContent);
+                                if (urlList === null)
+                                    return [2 /*return*/];
+                                dirStr = handleDir(fileItem);
+                                if (!fs.existsSync(dirStr)) return [3 /*break*/, 2];
+                                //下载图片到指定文章目录       
+                                return [4 /*yield*/, downloadImages(urlList, dirStr)];
+                            case 1:
+                                //下载图片到指定文章目录       
+                                _a.sent();
+                                return [3 /*break*/, 5];
+                            case 2: return [4 /*yield*/, runScript("mkdir " + dirStr)];
+                            case 3:
+                                _a.sent();
+                                //下载图片到指定文章目录       
+                                return [4 /*yield*/, downloadImages(urlList, dirStr)];
+                            case 4:
+                                //下载图片到指定文章目录       
+                                _a.sent();
+                                _a.label = 5;
+                            case 5: return [2 /*return*/];
                         }
                     });
-                }
-                catch (e) {
-                    console.log(e);
-                }
+                }); });
+                console.log('all image downloaded'); //用debug库
                 return [2 /*return*/];
         }
     });

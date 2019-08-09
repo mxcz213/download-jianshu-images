@@ -3,91 +3,92 @@ const path = require('path');
 const runScript = require('runscript');
 const download = require('download');
 
-//windows中用户复制的目录
-let sourceDir: string = 'D:\\jianshu_article\\user-5541401-1565071963\\';
-let targetDir: string = 'E:\\workCode\\download-jianshu-images\\jianshu_article\\';
+const [, , sourceDir, targetDir] = process.argv;
 
-try {
-    sourceDir = process.argv[2] ? process.argv[2] : sourceDir
-    targetDir = process.argv[3] ? process.argv[3] : targetDir
-} catch(e) {
-    console.log('获取命令参数错误', e)
-}
-
-//获取所有markdown文件
+//sourceDir：简书文章目录
 const getAllMarkdownFiles = async (sourceDir: string) => {
+    //ls **/*.md 查询二级目录下的所有.md后缀的文件
+    //stdio: pipe 在父进程和子进程之间建立管道
     const { stdout } = await runScript('ls **/*.md', {
         cwd: sourceDir,
         stdio: 'pipe'
     });
-    let files: string[] = stdout.toString().split('\n');
+    const files: string[] = stdout.toString().split('\n');
     //去掉ls命令产生的尾部空行
     files.pop();
     return files;
 }
 
 //处理目录为合法的windows目录
-const handleDir = (fileitem: string) => {
-    let filepath: string = fileitem.split('.md')[0].split('/').join('\\');
+const handleDir = (fileItem: string) => {
+    let filepath: string = fileItem.split('.md')[0].split('/').join('\\');  //不能只处理windows系统的命令
     let dirStr: string = `${targetDir}\\${filepath}`;
     return dirStr;
 }
 
 //获取markdown文件内容
 const getArticleContent = (fileitem: string) => {
-    let fileContent = fs.readFileSync(path.join(sourceDir, fileitem.split('/').join('\\')), { encoding: 'utf8'});
+    const wholePath = path.join(sourceDir, fileitem.split('/').join('\\'));  //不要进行平台特殊处理
+    let fileContent = fs.readFileSync(wholePath, { encoding: 'utf8'});
     return fileContent;
 }
 
 //获取图片url的markdown写法![](https://....)
 const getMarkdownImageUrls = (fileContent: string) => {
-    // const readmeUrlReg: RegExp = /!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)/g;
-    const readmeUrlReg: RegExp = /!\[\]\([\s\S]+\)/g;
-    return fileContent.match(readmeUrlReg);
+    const markdownUrlReg: RegExp = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
+    const markdownUrl = fileContent.match(markdownUrlReg);
+    return markdownUrl;
 }
 
 //获取真实的url格式：http://...
 const getRealImageUrl = (markdownUrls: string[]) => {
-    // const imageUrlReg: RegExp = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
-    const imageUrlReg: RegExp = /https:[a-zA-Z0-9-_?%./]+/g;
+    const imageUrlReg: RegExp = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
     let imageUrls: any[] = [];
     markdownUrls.forEach((item: any) => {
-        if(item.match(imageUrlReg)){
+        if(item.match(imageUrlReg).length > 0){
             imageUrls.push(item.match(imageUrlReg)[0])
+        } else {
+            return [];
         }
     });
     return imageUrls;
 }
 
 //下载图片
-const downloadImages = (imgurl: string[], path: string) => {   
+const downloadImages = async (imgurl: string[], path: string) => {   
     let newUrlArr: string[] = getRealImageUrl(imgurl);
     newUrlArr.map((url: string) => {
+        if(!url) return;
         download(url, path);
     });
-    console.log('all image downloaded');
 }
 
 //入口函数
 const runDownLoader = async () => {
     let files: string[] = await getAllMarkdownFiles(sourceDir);
-    try {
-        files.forEach((fileitem: any, index: number) => {
-            if(fileitem){
-                let dirStr = handleDir(fileitem);                
-                runScript(`mkdir ${dirStr}`, { stdio: 'pipe' })
-                .then(() => {
-                    let fileContent = getArticleContent(fileitem);
-                    let urlList: any = getMarkdownImageUrls(fileContent);
-                    if(urlList && urlList.length > 0){
-                        downloadImages(urlList, dirStr)
-                    }
-                })
-            }
-        })
-    } catch(e) {
-        console.log(e)
-    }
+
+    files.forEach(async (fileItem: string) => {
+        if(fileItem === null){
+            return;
+        }
+
+        //根据文章内容获取全部的图片url
+        let fileContent = getArticleContent(fileItem);
+        let urlList: any = getMarkdownImageUrls(fileContent);
+        if(urlList === null) return;
+
+        //根据文章创建目录，如果目录存在就删除
+        let dirStr = handleDir(fileItem);
+        if(fs.existsSync(dirStr)){
+            //下载图片到指定文章目录       
+            await downloadImages(urlList, dirStr);
+        } else {
+            await runScript(`mkdir ${dirStr}`);
+            //下载图片到指定文章目录       
+            await downloadImages(urlList, dirStr);
+        } 
+    });
+    console.log('all image downloaded');  //用debug库
 }
 
 runDownLoader();
