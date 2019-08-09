@@ -41,13 +41,15 @@ const getArticleContent = (fileitem: string) => {
 
 //获取图片url的markdown写法![](https://....)
 const getMarkdownImageUrls = (fileContent: string) => {
-    const readmeUrlReg: RegExp = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
+    // const readmeUrlReg: RegExp = /!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)/g;
+    const readmeUrlReg: RegExp = /!\[\]\([\s\S]+\)/g;
     return fileContent.match(readmeUrlReg);
 }
 
 //获取真实的url格式：http://...
 const getRealImageUrl = (markdownUrls: string[]) => {
-    const imageUrlReg: RegExp = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
+    // const imageUrlReg: RegExp = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
+    const imageUrlReg: RegExp = /https:[a-zA-Z0-9-_?%./]+/g;
     let imageUrls: any[] = [];
     markdownUrls.forEach((item: any) => {
         if(item.match(imageUrlReg)){

@@ -80,12 +80,14 @@ var getArticleContent = function (fileitem) {
 };
 //获取图片url的markdown写法![](https://....)
 var getMarkdownImageUrls = function (fileContent) {
-    var readmeUrlReg = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
+    // const readmeUrlReg: RegExp = /!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)/g;
+    var readmeUrlReg = /!\[\]\([\s\S]+\)/g;
     return fileContent.match(readmeUrlReg);
 };
 //获取真实的url格式：http://...
 var getRealImageUrl = function (markdownUrls) {
-    var imageUrlReg = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
+    // const imageUrlReg: RegExp = /https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+/g;
+    var imageUrlReg = /https:[a-zA-Z0-9-_?%./]+/g;
     var imageUrls = [];
     markdownUrls.forEach(function (item) {
         if (item.match(imageUrlReg)) {
