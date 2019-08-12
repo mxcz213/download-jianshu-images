@@ -39,7 +39,7 @@ var fs = require('fs');
 var path = require('path');
 var runScript = require('runscript');
 var download = require('download');
-var debug = require('debug')('Jianshu');
+var debug = require('debug')('jianshu');
 var _a = process.argv, sourceDir = _a[2], targetDir = _a[3];
 //获取系统平台
 var getSysterm = function () {
@@ -88,7 +88,8 @@ var getArticleContent = function (fileitem) {
 var getMarkdownImageUrls = function (fileContent) {
     var markdownUrlReg = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
     var markdownUrl = fileContent.match(markdownUrlReg);
-    return markdownUrl;
+    var urls = markdownUrl === null ? [] : markdownUrl;
+    return urls;
 };
 //获取真实的url格式：http://...
 var getRealImageUrl = function (markdownUrls) {
@@ -117,48 +118,49 @@ var downloadImages = function (imgurl, path) { return __awaiter(_this, void 0, v
         return [2 /*return*/];
     });
 }); };
+var runDownLoader = function (file) { return __awaiter(_this, void 0, void 0, function () {
+    var fileContent, urlList, dirStr, mkdirShell, deleteDirShell;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                fileContent = getArticleContent(file);
+                urlList = getMarkdownImageUrls(fileContent);
+                if (urlList.length === 0) {
+                    console.log("\u6587\u7AE0\uFF1A\u3010" + file + "\u3011\u4E2D\u6CA1\u6709\u56FE\u7247\uFF1B");
+                    return [2 /*return*/];
+                }
+                dirStr = handleDir(file);
+                mkdirShell = "mkdir " + dirStr;
+                deleteDirShell = "rd /s/q " + dirStr;
+                if (!fs.existsSync(dirStr)) return [3 /*break*/, 2];
+                return [4 /*yield*/, runScript(deleteDirShell)];
+            case 1:
+                _a.sent();
+                _a.label = 2;
+            case 2: return [4 /*yield*/, runScript(mkdirShell)];
+            case 3:
+                _a.sent();
+                return [4 /*yield*/, downloadImages(urlList, dirStr)];
+            case 4:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); };
 //入口函数
-var runDownLoader = function () { return __awaiter(_this, void 0, void 0, function () {
+var downLoader = function () { return __awaiter(_this, void 0, void 0, function () {
     var files;
-    var _this = this;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, getAllMarkdownFiles(sourceDir)];
             case 1:
                 files = _a.sent();
-                files.forEach(function (fileItem) { return __awaiter(_this, void 0, void 0, function () {
-                    var fileContent, urlList, dirStr, mkdirShell, deleteDirShell;
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0:
-                                if (fileItem === null) {
-                                    return [2 /*return*/];
-                                }
-                                fileContent = getArticleContent(fileItem);
-                                urlList = getMarkdownImageUrls(fileContent);
-                                if (urlList === null)
-                                    return [2 /*return*/];
-                                dirStr = handleDir(fileItem);
-                                mkdirShell = "mkdir " + dirStr;
-                                deleteDirShell = "rd /s/q " + dirStr;
-                                if (!fs.existsSync(dirStr)) return [3 /*break*/, 2];
-                                return [4 /*yield*/, runScript(deleteDirShell)];
-                            case 1:
-                                _a.sent();
-                                _a.label = 2;
-                            case 2: return [4 /*yield*/, runScript(mkdirShell)];
-                            case 3:
-                                _a.sent();
-                                return [4 /*yield*/, downloadImages(urlList, dirStr)];
-                            case 4:
-                                _a.sent();
-                                return [2 /*return*/];
-                        }
-                    });
-                }); });
-                debug('All Images Download Success!!!');
+                files.forEach(function (file) {
+                    runDownLoader(file);
+                });
+                console.log('所有文章中的图片已下载成功！');
                 return [2 /*return*/];
         }
     });
 }); };
-runDownLoader();
+downLoader();

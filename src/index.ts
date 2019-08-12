@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const runScript = require('runscript');
 const download = require('download');
-const debug = require('debug')('Jianshu');
+const debug = require('debug')('jianshu');
 const [, , sourceDir, targetDir] = process.argv;
 
 //获取系统平台
@@ -33,7 +33,7 @@ const handleDir = (fileItem: string) => {
     if(platform === 'win32'){
         filepath = fileItem.split('.md')[0].split('/').join('\\');
     };
-    let dirStr: string = path.join(targetDir, filepath);
+    const dirStr: string = path.join(targetDir, filepath);
     return dirStr;
 }
 
@@ -43,7 +43,7 @@ const getArticleContent = (fileitem: string) => {
     if(platform === 'win32'){
         wholePath = path.join(sourceDir, fileitem.split('/').join('\\'));
     }
-    let fileContent = fs.readFileSync(wholePath, { encoding: 'utf8'});
+    const fileContent = fs.readFileSync(wholePath, { encoding: 'utf8'});
     return fileContent;
 }
 
@@ -51,7 +51,8 @@ const getArticleContent = (fileitem: string) => {
 const getMarkdownImageUrls = (fileContent: string) => {
     const markdownUrlReg: RegExp = /\s!\[\]\(https:\/\/\upload-images.jianshu.io\/upload_images\/[a-zA-Z0-9-_?%./]+\)\s/g;
     const markdownUrl = fileContent.match(markdownUrlReg);
-    return markdownUrl;
+    let urls: string[] = markdownUrl === null ? [] : markdownUrl;
+    return urls;
 }
 
 //获取真实的url格式：http://...
@@ -70,44 +71,41 @@ const getRealImageUrl = (markdownUrls: string[]) => {
 
 //下载图片
 const downloadImages = async (imgurl: string[], path: string) => {   
-    let newUrlArr: string[] = getRealImageUrl(imgurl);
+    const newUrlArr: string[] = getRealImageUrl(imgurl);
     newUrlArr.map((url: string) => {
         if(!url) return;
         download(url, path);
     });
 }
 
-//入口函数
-const runDownLoader = async () => {
-    let files: string[] = await getAllMarkdownFiles(sourceDir);
+const runDownLoader = async (file: string) => {
+    //根据文章内容获取全部的图片url
+    const fileContent = getArticleContent(file);
+    const urlList: string[] = getMarkdownImageUrls(fileContent);
+    if(urlList.length === 0){
+        console.log(`文章：【${file}】中没有图片；`);
+        return;
+    }
 
-    files.forEach(async (fileItem: string) => {
-        if(fileItem === null){
-            return;
-        }
+    //根据文章创建目录，如果目录存在就删除
+    const dirStr = handleDir(file);
+    const mkdirShell: string = `mkdir ${dirStr}`;
 
-        //根据文章内容获取全部的图片url
-        let fileContent = getArticleContent(fileItem);
-        let urlList: any = getMarkdownImageUrls(fileContent);
-        if(urlList === null) return;
-
-        //根据文章创建目录，如果目录存在就删除
-        let dirStr = handleDir(fileItem);
-        const mkdirShell: string = `mkdir ${dirStr}`;
-        //先删除目录，然后下载图片到指定文章目录
-        const deleteDirShell: string = `rd /s/q ${dirStr}`;
-        if(fs.existsSync(dirStr)){
-            await runScript(deleteDirShell);
-        }
-        await runScript(mkdirShell);
-        await downloadImages(urlList, dirStr);
-    });
-
-    debug('All Images Download Success!!!');
+    //先删除目录，然后下载图片到指定文章目录
+    const deleteDirShell: string = `rd /s/q ${dirStr}`;
+    if(fs.existsSync(dirStr)){
+        await runScript(deleteDirShell);
+    }
+    await runScript(mkdirShell);
+    await downloadImages(urlList, dirStr);
 }
 
-runDownLoader();
-
-
-
-
+//入口函数
+const downLoader = async () => {
+    const files: string[] = await getAllMarkdownFiles(sourceDir);
+    files.forEach((file: string) => {
+        runDownLoader(file);
+    });
+    console.log('所有文章中的图片已下载成功！');
+}
+downLoader();
