@@ -2,8 +2,15 @@ const fs = require('fs');
 const path = require('path');
 const runScript = require('runscript');
 const download = require('download');
-
+const debug = require('debug')('Jianshu');
 const [, , sourceDir, targetDir] = process.argv;
+
+//获取系统平台
+const getSysterm = () => {
+    return process.platform;
+};
+
+const platform: string = getSysterm();
 
 //sourceDir：简书文章目录
 const getAllMarkdownFiles = async (sourceDir: string) => {
@@ -16,19 +23,26 @@ const getAllMarkdownFiles = async (sourceDir: string) => {
     const files: string[] = stdout.toString().split('\n');
     //去掉ls命令产生的尾部空行
     files.pop();
+    debug('GET All jianshu files...');
     return files;
 }
 
-//处理目录为合法的windows目录
 const handleDir = (fileItem: string) => {
-    let filepath: string = fileItem.split('.md')[0].split('/').join('\\');  //不能只处理windows系统的命令
-    let dirStr: string = `${targetDir}\\${filepath}`;
+    let filepath: string = fileItem.split('.md')[0]; 
+    //处理目录为合法的windows  
+    if(platform === 'win32'){
+        filepath = fileItem.split('.md')[0].split('/').join('\\');
+    };
+    let dirStr: string = path.join(targetDir, filepath);
     return dirStr;
 }
 
 //获取markdown文件内容
 const getArticleContent = (fileitem: string) => {
-    const wholePath = path.join(sourceDir, fileitem.split('/').join('\\'));  //不要进行平台特殊处理
+    let wholePath: string = fileitem;
+    if(platform === 'win32'){
+        wholePath = path.join(sourceDir, fileitem.split('/').join('\\'));
+    }
     let fileContent = fs.readFileSync(wholePath, { encoding: 'utf8'});
     return fileContent;
 }
@@ -79,16 +93,17 @@ const runDownLoader = async () => {
 
         //根据文章创建目录，如果目录存在就删除
         let dirStr = handleDir(fileItem);
+        const mkdirShell: string = `mkdir ${dirStr}`;
+        //先删除目录，然后下载图片到指定文章目录
+        const deleteDirShell: string = `rd /s/q ${dirStr}`;
         if(fs.existsSync(dirStr)){
-            //下载图片到指定文章目录       
-            await downloadImages(urlList, dirStr);
-        } else {
-            await runScript(`mkdir ${dirStr}`);
-            //下载图片到指定文章目录       
-            await downloadImages(urlList, dirStr);
-        } 
+            await runScript(deleteDirShell);
+        }
+        await runScript(mkdirShell);
+        await downloadImages(urlList, dirStr);
     });
-    console.log('all image downloaded');  //用debug库
+
+    debug('All Images Download Success!!!');
 }
 
 runDownLoader();

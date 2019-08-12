@@ -39,7 +39,13 @@ var fs = require('fs');
 var path = require('path');
 var runScript = require('runscript');
 var download = require('download');
+var debug = require('debug')('Jianshu');
 var _a = process.argv, sourceDir = _a[2], targetDir = _a[3];
+//获取系统平台
+var getSysterm = function () {
+    return process.platform;
+};
+var platform = getSysterm();
 //sourceDir：简书文章目录
 var getAllMarkdownFiles = function (sourceDir) { return __awaiter(_this, void 0, void 0, function () {
     var stdout, files;
@@ -54,19 +60,27 @@ var getAllMarkdownFiles = function (sourceDir) { return __awaiter(_this, void 0,
                 files = stdout.toString().split('\n');
                 //去掉ls命令产生的尾部空行
                 files.pop();
+                debug('GET All jianshu files...');
                 return [2 /*return*/, files];
         }
     });
 }); };
-//处理目录为合法的windows目录
 var handleDir = function (fileItem) {
-    var filepath = fileItem.split('.md')[0].split('/').join('\\'); //不能只处理windows系统的命令
-    var dirStr = targetDir + "\\" + filepath;
+    var filepath = fileItem.split('.md')[0];
+    //处理目录为合法的windows  
+    if (platform === 'win32') {
+        filepath = fileItem.split('.md')[0].split('/').join('\\');
+    }
+    ;
+    var dirStr = path.join(targetDir, filepath);
     return dirStr;
 };
 //获取markdown文件内容
 var getArticleContent = function (fileitem) {
-    var wholePath = path.join(sourceDir, fileitem.split('/').join('\\')); //不要进行平台特殊处理
+    var wholePath = fileitem;
+    if (platform === 'win32') {
+        wholePath = path.join(sourceDir, fileitem.split('/').join('\\'));
+    }
     var fileContent = fs.readFileSync(wholePath, { encoding: 'utf8' });
     return fileContent;
 };
@@ -113,7 +127,7 @@ var runDownLoader = function () { return __awaiter(_this, void 0, void 0, functi
             case 1:
                 files = _a.sent();
                 files.forEach(function (fileItem) { return __awaiter(_this, void 0, void 0, function () {
-                    var fileContent, urlList, dirStr;
+                    var fileContent, urlList, dirStr, mkdirShell, deleteDirShell;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
@@ -125,27 +139,24 @@ var runDownLoader = function () { return __awaiter(_this, void 0, void 0, functi
                                 if (urlList === null)
                                     return [2 /*return*/];
                                 dirStr = handleDir(fileItem);
+                                mkdirShell = "mkdir " + dirStr;
+                                deleteDirShell = "rd /s/q " + dirStr;
                                 if (!fs.existsSync(dirStr)) return [3 /*break*/, 2];
-                                //下载图片到指定文章目录       
-                                return [4 /*yield*/, downloadImages(urlList, dirStr)];
+                                return [4 /*yield*/, runScript(deleteDirShell)];
                             case 1:
-                                //下载图片到指定文章目录       
                                 _a.sent();
-                                return [3 /*break*/, 5];
-                            case 2: return [4 /*yield*/, runScript("mkdir " + dirStr)];
+                                _a.label = 2;
+                            case 2: return [4 /*yield*/, runScript(mkdirShell)];
                             case 3:
                                 _a.sent();
-                                //下载图片到指定文章目录       
                                 return [4 /*yield*/, downloadImages(urlList, dirStr)];
                             case 4:
-                                //下载图片到指定文章目录       
                                 _a.sent();
-                                _a.label = 5;
-                            case 5: return [2 /*return*/];
+                                return [2 /*return*/];
                         }
                     });
                 }); });
-                console.log('all image downloaded'); //用debug库
+                debug('All Images Download Success!!!');
                 return [2 /*return*/];
         }
     });
