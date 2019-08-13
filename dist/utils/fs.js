@@ -34,64 +34,50 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
-var path_1 = __importDefault(require("path"));
-var log_1 = require("./utils/log");
-var fs_1 = require("./utils/fs");
-var lib_1 = require("./libs/lib");
-//入口函数
-var main = function () { return __awaiter(_this, void 0, void 0, function () {
-    var platform, isWindows, _a, sourceDir, targetDir, files, _i, files_1, file, platFile, filepath, filecontent, newTargetDir, urlList, _b, urlList_1, url;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
-            case 0:
-                platform = process.platform;
-                isWindows = platform === 'win32';
-                _a = process.argv, sourceDir = _a[2], targetDir = _a[3];
-                return [4 /*yield*/, lib_1.getAllMarkdownFiles(sourceDir)];
+var fs = require('fs');
+var runScript = require('runscript');
+var download = require('download');
+var read = function (path, options) {
+    var fileContent = fs.readFileSync(path, options);
+    return fileContent;
+};
+exports.read = read;
+var createDir = function (targetDir) { return __awaiter(_this, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, runScript("mkdir " + targetDir)];
             case 1:
-                files = _c.sent();
-                _i = 0, files_1 = files;
-                _c.label = 2;
-            case 2:
-                if (!(_i < files_1.length)) return [3 /*break*/, 10];
-                file = files_1[_i];
-                platFile = isWindows ? file.split('.md')[0].split('/').join('\\') + ".md" : file;
-                filepath = platFile.split('.md')[0];
-                filecontent = fs_1.read(path_1.default.join(sourceDir, platFile), { encoding: 'utf8' });
-                newTargetDir = path_1.default.join(targetDir, filepath);
-                if (!fs_1.isExistDir(newTargetDir)) return [3 /*break*/, 4];
-                return [4 /*yield*/, fs_1.deleteDir(newTargetDir)];
-            case 3:
-                _c.sent();
-                _c.label = 4;
-            case 4: return [4 /*yield*/, fs_1.createDir(newTargetDir)];
-            case 5:
-                _c.sent();
-                urlList = lib_1.getMarkdownImageUrls(filecontent);
-                _b = 0, urlList_1 = urlList;
-                _c.label = 6;
-            case 6:
-                if (!(_b < urlList_1.length)) return [3 /*break*/, 9];
-                url = urlList_1[_b];
-                return [4 /*yield*/, fs_1.downloadFile(url, newTargetDir)];
-            case 7:
-                _c.sent();
-                _c.label = 8;
-            case 8:
-                _b++;
-                return [3 /*break*/, 6];
-            case 9:
-                _i++;
-                return [3 /*break*/, 2];
-            case 10:
-                log_1.log('所有文章中的图片已下载成功！');
+                _a.sent();
                 return [2 /*return*/];
         }
     });
 }); };
-main();
+exports.createDir = createDir;
+var deleteDir = function (targetDir) { return __awaiter(_this, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, runScript("rd /s/q " + targetDir)];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); };
+exports.deleteDir = deleteDir;
+var isExistDir = function (targetDir) {
+    return fs.existsSync(targetDir);
+};
+exports.isExistDir = isExistDir;
+var downloadFile = function (url, targetDir) { return __awaiter(_this, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, download(url, targetDir)];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); };
+exports.downloadFile = downloadFile;
