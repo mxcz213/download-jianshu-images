@@ -32,6 +32,6 @@ Node + typescript 实现下载简书文章中所有的图片链接
 
 `node . D:\jianshu_article\user-5541401-1565071963 D:\jianshu_article\article_img`
 
-##使用cli的方式
+## 使用cli的方式
 
 `jianshu D:\jianshu_article\user-5541401-1565071963 D:\jianshu_article\article_img`
